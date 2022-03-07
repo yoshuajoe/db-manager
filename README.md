@@ -1,45 +1,413 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+# SELECT
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+### SELECT ALL
+Table name can use alias (as)
+```sh
+{
+    table: 'table_1'
+}
+// select * from table_1
+# OR
+{
+    table: 'table_1 as t1',
+    column: []
+}
+// select * from table_1 as t1
+```
+## SELECT COLUMNS
+Colum names can use alias (as)
+### SELECT with column name
+```sh
+{
+    table: 'table_1',
+    column: [ 'col_1', 'col_2', 'col_3']
+}
+// select col_1, col_2, col_3 from table_1
+```
+### SELECT with expression or raw or query
+```sh
+# 
+{
+    table: 'ms_test',
+    column: [ 
+        'col_1 ', 'col_2 as c2'
+        {
+            type: "expression", 
+            colname: "count(1) as :alias:", 
+            value: {
+                alias: "cnt"
+            } 
+        }
+    ]
+}
+// select `col1`, `col2` as `c2`, count(1) as `cnt` from `ms_test`
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+# With select query inside columns
 
----
+{
+    table: 'ms_test as t',
+    column: [ 
+        'col_1 ', 'col_2 as c2'
+        {
+            type: "expression", 
+            colname: "(select count(t_child.id) from ms_test_child as t_child where t_child.test_id = t.id) as c_child", 
+            value: {} # this 'value' key is must an object 
+        }
+    ]
+}
+// select `col1`, `col2` as `c2`, (select count(t_child.id) from ms_test_child as t_child where t_child.test_id = t.id) as `c_child` from `ms_test`
+```
+## SELECT 
+Select data filtered with where
+Operator (op) list values:
+- "eq": equal (=)
+- "neq": not equal (!=)
+- "lte": less than equals (<=)
+- "gte": greater than equals (>=)
+- "lt": less than (<)
+- "gt": greater than (>)
+- "like": like (like)
+### Select where AND
+```sh
+{
+    table: "ms_test",
+    filter: {
+        type: "and", # only 'and'/'or'
+        fields: [
+            {
+                name: "id",
+                value: 0,
+                op: "gte"
+            },
+            {
+                name: "id",
+                value: 50,
+                op: "lte"
+            },
+            {
+                name: "name",
+                value: "%a%",
+                op: "like"
+            }
+        ]
+    }
+}
+// select * from `ms_test` where `id` >= 0 and `id` <= 50 and `name` like '%a%'
+```
+### Select where OR
+```sh
+{
+    table: "ms_test",
+    filter: {
+        type: "or", # only 'and'/'or'
+        fields: [
+            {
+                name: "id",
+                value: 3,
+                op: "gte"
+            },
+            {
+                name: "name",
+                value: "%a%",
+                op: "like"
+            }
+        ]
+    }
+}
+// select * from `ms_test` where `id` >= 3 or `name` like '%a%'
+```
+### Select where OR & AND together
+```sh
+{
+    table: "ms_test",
+    filter: {
+        type: "or", # only 'and'/'or'
+        fields: [
+            {
+                name: "id",
+                value: 3,
+                op: "gte"
+            },
+            {
+                name: "name",
+                value: "%a%",
+                op: "like"
+            },
+            {
+                type: "and", # only 'and'/'or'
+                fields: [
+                    {
+                        name: "name",
+                        value: "%i%",
+                        op: "like"
+                    },
+                    {
+                        name: "description",
+                        op: "eq",
+                        value: null
+                    },
+                ]
+            }
+        ]
+    }
+}
+// select * from `ms_test` where `id` >= 3 or `name` like '%a%' and `name` like '%i%' and `description` is null
+```
+## SELECT with LIMIT and OFFSET
+```sh
+{
+    table: "ms_test",
+    limit: 2,
+    offset: 1
+}
+// select * from `ms_test` limit 2 offset 1
+```
+## SELECT with ORDER BY
+```sh
+{
+    table: "ms_test as t",
+    order: [
+        {
+            name: 't.id',
+            type: 'desc'
+        },
+        {
+            name: 't.name',
+            type: 'asc'
+        }
+    ]
+}
+// select * from `ms_test` as `t` order by `t`.`id` desc, `t`.`name` asc
+```
+## SELECT with GROUP BY
+```sh
+{
+    table: "ms_test as t",
+    group: [
+        "t.name"
+    ]
+}
+// select * from `ms_test` as `t` group by `t`.`name`
+```
+## SELECT JOIN
+You can combine with other SELECT feature above like filter/where, group by, order by, etc.
+Join type list values:
+- "inner"
+- "left"
+- "right"
+- "raw"
+```sh
+{
+    table: "ms_test",
+    column: [
+        "ms_test.*",
+        "status.name as status"
+    ],
+    join: [
+        {
+            name: "lt_test_status as status",
+            type: "inner", 
+            constraint:[
+                {
+                    source: "ms_test.test_status_id",
+                    dest:"status.id",
+                    op: "eq"   # same as filter/where
+                }
+            ]
+        }
+    ],
+    filter: {
+        type: "and",
+        fields: [
+            name: "status.id",
+            op: "neq",
+            value: 0
+        ]
+    }
+}
+// select ms_test.*, status.name as status from `ms_test` inner join `lt_test_status` as `status` on (`ms_test`.`test_status_id` = `status`.`id`) where status.id != 0
 
-## Edit a file
+# join with raw
+{
+    table: "ms_test",
+    column
+    join: [
+        {
+            name: "lt_test_status as status",
+            type: "right", 
+            kind:"table", 
+            constraint:[
+                {
+                    source:"ms_test.test_status_id",
+                    dest:"status.id",
+                    op: "eq"
+                }
+            ]
+        },
+        {
+            name: "(select @param_1:='sCbN2YFt' param_1, @param_2:='5GuTVLI7' param_2, @param_3='87DBOiFN' param_3 ) as parm",
+            type: "raw",
+            constraint:[
+            ]
+        }
+    ]
+}
+// select * from `ms_test` right join `lt_test_status` as `status` on (`ms_test`.`test_status_id` = `status`.`id`) (select @param_1:='sCbN2YFt' param_1, @param_2:='5GuTVLI7' param_2, @param_3='87DBOiFN' param_3 ) as parm
+```
+## INSERT
+Can insert raw like now(), etc.
+column_values is array, posible to insert multiple values in one table
+### INSERT on single table
+```sh
+{
+    table: "ms_test",
+    column_values: [
+        {
+            created_at: {
+                raw: "now()"
+            },
+            name: "terserah",
+            description: "warga +62"
+        },
+        {
+            created_at: {
+                raw: "now()"
+            },
+            name: {
+                raw: "concat('terserah2', 'CAT')"
+            },
+            description: "warga terserah"
+        }
+    ]
+}
+// insert into `ms_test` (`created_at`, `description`, `name`) values (now(), 'warga +62', 'terserah'), (now(), 'warga terserah', concat('terserah2', 'CAT'))
+```
+### INSERT on multiple table
+You can insert data on multiple table in one transactional query with payload below.
+queries is array of object, the value for same like single insert above
+```sh
+{
+    type: "multiple"
+    queries: [
+        {
+            table: "ms_test",
+            column_values: [
+                {
+                    field_1: "value 1",
+                    field_2: "value 2",
+                    description: "warga +62"
+                }
+            ]
+        },
+        {
+            table: "ms_test_children",
+            column_values: [
+                {
+                    field_1: "value 1",
+                    field_2: "value 2",
+                    description: "warga +62"
+                }
+            ]
+        }
+    ]
+}]
+```
+## UPDATE
+Same like insert, you can edit value of fields with raw like now(), etc.
+But the value of column_value to update data is not array but object, the key name is also different.
+You can use filter or where like select to, if not use filter, all data in the table will updated
+### UPDATE on single table
+```sh
+{
+    table: "ms_test",
+    column_value: {
+        created_at: {
+            raw: "now()"
+        },
+        name: "naruto uzumaki",
+        description: "warga konoha"
+    },
+    filter: {
+        type: "or",
+        fields: [
+            {
+                name: "id",
+                value: 25,
+                op: "eq"
+            }
+        ]
+    }
+}
+// update `ms_test` set `created_at` = now(), `name` = 'naruto uzumaki', `description` = 'warga konoha' where `id` = 25
+```
+### UPDATE on multiple table
+You can update data on multiple table in one transactional query with payload below.
+queries is array of object, the value for same like single update above
+```sh
+{
+    type: "multiple"
+    queries: [
+        {
+            table: "ms_test",
+            column_value: {
+                created_at: {
+                    raw: "now()"
+                },
+                name: "naruto uzumaki",
+                description: "warga konoha"
+            },
+            filter: {
+                type: "or",
+                fields: [
+                    {
+                        name: "id",
+                        value: 25,
+                        op: "eq"
+                    }
+                ]
+            }
+        }
+        {
+            table: "ms_test_children",
+            column_value: {
+                created_at: {
+                    raw: "now()"
+                },
+                name: "naruto uzumaki",
+                description: "warga konoha"
+            },
+            filter: {
+                type: "or",
+                fields: [
+                    {
+                        name: "id",
+                        value: 25,
+                        op: "eq"
+                    }
+                ]
+            }
+        }
+    ]
+}]
+```
+## DELETE
+You can use filter or where like select and upder to, if not use filter, all data in the table will deleted.
+You also can delete data on multiple table, it's similiar with UPDATE but the key queries value use object below
+```sh
+{
+    table: "ms_test",
+    filter: {
+        type: "and",
+        fields: [
+            { 
+                name: "id", 
+                value: 3, 
+                op: "eq"
+            }
+        ]
+    }
+}
+// delete from `ms_test` where `id` = 3
+```
 
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
 
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
-
----
-
-## Create a file
-
-Next, you’ll add a new file to this repository.
-
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
-
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
-
----
-
-## Clone a repository
-
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
-
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
-
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
