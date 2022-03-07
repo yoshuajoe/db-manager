@@ -1,0 +1,27 @@
+{
+  "name": "manos-db-helper",
+  "version": "1.0.0",
+  "description": "DB Helper for Risk Management App Manos",
+  "main": "app.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://isagoutamadev@bitbucket.org/riskmanagementmanos/db-helper.git"
+  },
+  "author": "Manos",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/riskmanagementmanos/db-helper#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-error-slack": "^2.0.0",
+    "knex": "^0.21.1",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "jest": "^26.1.0"
+  }
+}
